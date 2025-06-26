@@ -61,10 +61,16 @@ class DatabaseManager:
     def create_tables(self):
         """Create necessary database tables"""
         try:
+            # Drop existing tables to fix schema issues
+            self.conn.execute('DROP TABLE IF EXISTS faces CASCADE')
+            self.conn.execute('DROP TABLE IF EXISTS images CASCADE')
+            self.conn.execute('DROP TABLE IF EXISTS search_queries CASCADE')
+            self.conn.execute('DROP TABLE IF EXISTS crawl_sessions CASCADE')
+            
             # Images table - stores information about crawled/uploaded images
             self.conn.execute('''
-                CREATE TABLE IF NOT EXISTS images (
-                    id INTEGER PRIMARY KEY,
+                CREATE TABLE images (
+                    id INTEGER,
                     file_path TEXT NOT NULL UNIQUE,
                     filename TEXT NOT NULL,
                     source TEXT NOT NULL,
@@ -76,16 +82,17 @@ class DatabaseManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     processed_at TIMESTAMP,
                     face_count INTEGER DEFAULT 0,
-                    processing_status TEXT DEFAULT 'pending'
+                    processing_status TEXT DEFAULT 'pending',
+                    PRIMARY KEY (id)
                 )
             ''')
             
             # Faces table - stores face detection and embedding data
             self.conn.execute('''
-                CREATE TABLE IF NOT EXISTS faces (
-                    id INTEGER PRIMARY KEY,
+                CREATE TABLE faces (
+                    id INTEGER,
                     image_id INTEGER,
-                    face_index INTEGER,
+                    face_index INTEGER,  
                     bbox_x INTEGER,
                     bbox_y INTEGER,
                     bbox_width INTEGER,
@@ -98,6 +105,7 @@ class DatabaseManager:
                     thumbnail_path TEXT,
                     faiss_index INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
                     FOREIGN KEY (image_id) REFERENCES images (id)
                 )
             ''')
@@ -162,15 +170,18 @@ class DatabaseManager:
             Image ID of the inserted record
         """
         try:
-            result = self.conn.execute('''
-                INSERT INTO images (file_path, filename, source, url, file_size, width, height, format)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING id
-            ''', [file_path, filename, source, url, file_size, width, height, format])
+            # Get next available ID manually for DuckDB compatibility
+            max_id_result = self.conn.execute('SELECT COALESCE(MAX(id), 0) + 1 FROM images').fetchone()
+            next_id = max_id_result[0] if max_id_result else 1
             
-            image_id = result.fetchone()[0]
-            logging.debug(f"Added image record with ID {image_id}")
-            return image_id
+            # Insert with explicit ID
+            self.conn.execute('''
+                INSERT INTO images (id, file_path, filename, source, url, file_size, width, height, format)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', [next_id, file_path, filename, source, url, file_size, width, height, format])
+            
+            logging.debug(f"Added image record with ID {next_id}")
+            return next_id
             
         except Exception as e:
             logging.error(f"Error adding image record: {e}")
@@ -203,17 +214,20 @@ class DatabaseManager:
             # Serialize embedding
             embedding_blob = embedding.tobytes() if embedding is not None else None
             
-            result = self.conn.execute('''
-                INSERT INTO faces (image_id, face_index, bbox_x, bbox_y, bbox_width, bbox_height,
+            # Get next available face ID manually for DuckDB compatibility
+            max_face_id_result = self.conn.execute('SELECT COALESCE(MAX(id), 0) + 1 FROM faces').fetchone()
+            next_face_id = max_face_id_result[0] if max_face_id_result else 1
+            
+            # Insert with explicit ID
+            self.conn.execute('''
+                INSERT INTO faces (id, image_id, face_index, bbox_x, bbox_y, bbox_width, bbox_height,
                                  confidence, embedding_vector, age, gender, landmarks, thumbnail_path, faiss_index)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING id
-            ''', [image_id, face_index, bbox[0], bbox[1], bbox[2], bbox[3], 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', [next_face_id, image_id, face_index, bbox[0], bbox[1], bbox[2], bbox[3], 
                   confidence, embedding_blob, age, gender, landmarks, thumbnail_path, faiss_index])
             
-            face_id = result.fetchone()[0]
-            logging.debug(f"Added face record with ID {face_id}")
-            return face_id
+            logging.debug(f"Added face record with ID {next_face_id}")
+            return next_face_id
             
         except Exception as e:
             logging.error(f"Error adding face record: {e}")

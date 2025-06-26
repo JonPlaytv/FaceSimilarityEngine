@@ -18,7 +18,7 @@ class InsightFaceEngine:
         
         # Detection parameters - set before initialization
         self.detection_size = (640, 640)
-        self.confidence_threshold = 0.5
+        self.confidence_threshold = 0.3
         self.embedding_dim = 512
         
         self.initialize_models()
