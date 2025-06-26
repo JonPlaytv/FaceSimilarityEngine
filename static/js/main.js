@@ -2,8 +2,46 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeUploadHandlers();
+    initializeDatasetButtons();
+    checkDatasetStatus();
     checkDatasetStatusPeriodically();
 });
+
+function initializeDatasetButtons() {
+    const crawlBtn = document.getElementById('crawlBtn');
+    const initializeBtn = document.getElementById('initializeBtn');
+    const clearUrlBtn = document.getElementById('clearUrlBtn');
+    
+    // Prevent multiple initializations
+    if (crawlBtn && !crawlBtn.dataset.initialized) {
+        crawlBtn.addEventListener('click', function() {
+            const customUrlInput = document.getElementById('customUrlInput');
+            const customUrl = customUrlInput ? customUrlInput.value.trim() : '';
+            startCrawling(customUrl);
+        });
+        crawlBtn.dataset.initialized = 'true';
+    }
+    
+    if (initializeBtn && !initializeBtn.dataset.initialized) {
+        initializeBtn.addEventListener('click', initializeDataset);
+        initializeBtn.dataset.initialized = 'true';
+    }
+    
+    if (clearUrlBtn && !clearUrlBtn.dataset.initialized) {
+        clearUrlBtn.addEventListener('click', function() {
+            const customUrlInput = document.getElementById('customUrlInput');
+            if (customUrlInput) {
+                customUrlInput.value = '';
+            }
+        });
+        clearUrlBtn.dataset.initialized = 'true';
+    }
+}
+
+// Definiere die Handler-Funktion **außerhalb** der Initialisierung
+function onFileInputChange(e) {
+    handleFileSelection(e.target.files[0]);
+}
 
 function initializeUploadHandlers() {
     const uploadArea = document.getElementById('uploadArea');
@@ -13,29 +51,35 @@ function initializeUploadHandlers() {
     const chooseFileBtn = document.getElementById('chooseFileBtn');
 
     if (!uploadArea || !fileInput) return;
-    
-    // Prevent multiple initializations
+
+    // Prüfe, ob schon initialisiert
     if (fileInput.dataset.initialized === 'true') return;
     fileInput.dataset.initialized = 'true';
 
-    // Choose File button handler
+    // **WICHTIG:** Keine removeEventListener mehr nötig, weil dieser Handler nur einmal hinzugefügt wird
+    fileInput.addEventListener('change', onFileInputChange);
+
     if (chooseFileBtn) {
         chooseFileBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation(); // Prevent bubbling to upload area
             fileInput.click();
         });
     }
 
-    // Define the handler outside of any other function so it's the same reference
-    function onFileInputChange(e) {
-    handleFileSelection(e.target.files[0]);
-}
+    // Ensure submit button works properly
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent bubbling to upload area
+            if (fileInput.files[0]) {
+                uploadForm.submit();
+            } else {
+                showAlert('Please select a file first.', 'warning');
+            }
+        });
+    }
 
-    // Then before adding:
-    fileInput.removeEventListener('change', onFileInputChange); // safe even if not added yet
-    fileInput.addEventListener('change', onFileInputChange);
-
-    // Drag and drop handlers
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
         uploadArea.classList.add('dragover');
@@ -49,7 +93,6 @@ function initializeUploadHandlers() {
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
-        
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             fileInput.files = files;
@@ -57,7 +100,6 @@ function initializeUploadHandlers() {
         }
     });
 
-    // Form submission handler
     if (uploadForm) {
         uploadForm.addEventListener('submit', function(e) {
             if (!fileInput.files[0]) {
@@ -65,13 +107,18 @@ function initializeUploadHandlers() {
                 showAlert('Please select a file first.', 'warning');
                 return;
             }
-            
             showProgress();
         });
     }
 
-    // Click to upload
-    uploadArea.addEventListener('click', function() {
+    uploadArea.addEventListener('click', function(e) {
+        // Don't trigger file input if clicking on buttons or form elements
+        if (e.target.tagName === 'BUTTON' || 
+            e.target.tagName === 'INPUT' || 
+            e.target.closest('button') || 
+            e.target.closest('.btn')) {
+            return;
+        }
         fileInput.click();
     });
 }
@@ -111,12 +158,10 @@ function handleFileSelection(file) {
     if (uploadAreaTitle) uploadAreaTitle.style.display = 'none';
     if (uploadAreaText) uploadAreaText.style.display = 'none';
 
-    // Enable submit button if dataset is ready
-    checkDatasetStatus().then(isReady => {
-        if (submitBtn) {
-            submitBtn.disabled = !isReady;
-        }
-    });
+    // Enable submit button when file is selected
+    if (submitBtn) {
+        submitBtn.disabled = false;
+    }
 
     // Preview image (optional)
     previewImage(file);
@@ -203,11 +248,59 @@ async function checkDatasetStatus() {
         const data = await response.json();
         
         updateDatasetStatusUI(data);
+        updateMainDatasetUI(data);
         
-        return data.initialized && data.size > 0;
+        return data.initialized && data.total_faces > 0;
     } catch (error) {
         console.error('Error checking dataset status:', error);
+        updateDatasetStatusUI({initialized: false, size: 0});
         return false;
+    }
+}
+
+function updateMainDatasetUI(data) {
+    const datasetInfo = document.getElementById('datasetInfo');
+    const initializeBtn = document.getElementById('initializeBtn');
+    const crawlBtn = document.getElementById('crawlBtn');
+    const advancedStats = document.getElementById('advancedStats');
+    
+    if (data.initialized && data.total_faces > 0) {
+        if (datasetInfo) {
+            datasetInfo.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Dataset ready with <strong>${data.total_faces}</strong> faces from <strong>${data.total_images}</strong> images
+                    <br><small>Database: ${data.database_type || 'PostgreSQL + DuckDB'}</small>
+                </div>
+            `;
+        }
+        if (initializeBtn) initializeBtn.disabled = false;
+        if (crawlBtn) crawlBtn.disabled = false;
+        
+        // Show advanced statistics
+        const totalImages = document.getElementById('totalImages');
+        const totalFaces = document.getElementById('totalFaces');
+        const avgConfidence = document.getElementById('avgConfidence');
+        const crawledCount = document.getElementById('crawledCount');
+        
+        if (totalImages) totalImages.textContent = data.total_images || 0;
+        if (totalFaces) totalFaces.textContent = data.total_faces || 0;
+        if (avgConfidence) avgConfidence.textContent = Math.round((data.avg_confidence || 0) * 100) + '%';
+        if (crawledCount) crawledCount.textContent = data.crawl_sessions || 0;
+        if (advancedStats) advancedStats.style.display = 'block';
+        
+    } else {
+        if (datasetInfo) {
+            datasetInfo.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No face dataset found. Click "Crawl Images" to automatically collect face images from public websites, or "Initialize Dataset" to set up the system.
+                    <br><small>The system needs images to compare against your uploads.</small>
+                </div>
+            `;
+        }
+        if (initializeBtn) initializeBtn.disabled = false;
+        if (crawlBtn) crawlBtn.disabled = false;
     }
 }
 
@@ -217,9 +310,9 @@ function updateDatasetStatusUI(data) {
 
     if (!statusBadge || !statusText) return;
 
-    if (data.initialized && data.size > 0) {
+    if (data.initialized && data.total_faces > 0) {
         statusBadge.className = 'badge bg-success';
-        statusText.textContent = `${data.size} faces ready`;
+        statusText.textContent = `${data.total_faces} faces ready`;
     } else {
         statusBadge.className = 'badge bg-warning';
         statusText.textContent = 'Dataset not initialized';
@@ -276,6 +369,144 @@ function handleImageError(img) {
     placeholder.innerHTML = '<i class="fas fa-image"></i>';
     
     img.parentNode.insertBefore(placeholder, img);
+}
+
+function startCrawling(customUrl = '') {
+    const crawlBtn = document.getElementById('crawlBtn');
+    const originalText = crawlBtn.innerHTML;
+    
+    crawlBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Crawling Images...';
+    crawlBtn.disabled = true;
+    
+    fetch('/crawl_images', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            max_images: 50,
+            custom_url: customUrl
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                Successfully started crawling! Found ${data.images_crawled || 0} images with ${data.faces_detected || 0} faces.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('datasetCard').appendChild(alert);
+            
+            // Refresh status after crawling
+            setTimeout(() => {
+                checkDatasetStatus();
+            }, 2000);
+        } else {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-warning alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${data.message || 'Crawling completed with some issues. Check the logs for details.'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('datasetCard').appendChild(alert);
+        }
+    })
+    .catch(error => {
+        console.error('Error crawling images:', error);
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alert.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            Error starting image crawling. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.getElementById('datasetCard').appendChild(alert);
+    })
+    .finally(() => {
+        crawlBtn.innerHTML = originalText;
+        crawlBtn.disabled = false;
+    });
+}
+
+function initializeDataset() {
+    const initializeBtn = document.getElementById('initializeBtn');
+    const originalText = initializeBtn.innerHTML;
+    
+    initializeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Images...';
+    initializeBtn.disabled = true;
+    
+    fetch('/initialize_dataset', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('datasetCard').appendChild(alert);
+            
+            // Refresh status after initialization
+            setTimeout(() => {
+                checkDatasetStatus();
+            }, 2000);
+        } else {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-warning alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${data.message || 'Dataset initialization had some issues.'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('datasetCard').appendChild(alert);
+        }
+    })
+    .catch(error => {
+        console.error('Error initializing dataset:', error);
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alert.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            Error initializing dataset. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.getElementById('datasetCard').appendChild(alert);
+    })
+    .finally(() => {
+        initializeBtn.innerHTML = originalText;
+        initializeBtn.disabled = false;
+    });
+}
+
+
+
+function clearFile() {
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const submitBtn = document.getElementById('submitBtn');
+    const imagePreview = document.getElementById('imagePreview');
+
+    if (fileInput) fileInput.value = '';
+    if (fileInfo) fileInfo.style.display = 'none';
+    if (submitBtn) submitBtn.disabled = true;
+    if (imagePreview) imagePreview.style.display = 'none';
+    
+    // Show upload area text
+    const uploadAreaTitle = document.querySelector('.upload-area h5');
+    const uploadAreaText = document.querySelector('.upload-area p');
+    if (uploadAreaTitle) uploadAreaTitle.style.display = 'block';
+    if (uploadAreaText) uploadAreaText.style.display = 'block';
 }
 
 // Add global error handler for images

@@ -193,8 +193,22 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
+        # Always add uploaded files to dataset
+        dataset_filepath = os.path.join(DATASET_FOLDER, filename)
+        import shutil
+        shutil.copy2(filepath, dataset_filepath)
+        logging.info(f"Added uploaded image to dataset: {filename}")
+        
         # Process the uploaded image using common function
-        return process_image_file(filepath, filename, is_sample=False)
+        result = process_image_file(filepath, filename, is_sample=False)
+        
+        # Process the uploaded image for the search index
+        try:
+            process_image_dataset([dataset_filepath])
+        except Exception as e:
+            logging.error(f"Error adding to dataset: {e}")
+        
+        return result
     
     except Exception as e:
         logging.error(f"Upload error: {str(e)}")
