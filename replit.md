@@ -99,9 +99,20 @@ This is an advanced automated face search system that crawls real face images fr
 └── *.py              # Python modules
 ```
 
+## Recent Changes
+
+- **June 26, 2025**: Complete system transformation to automated face search
+  - Integrated InsightFace AI models for state-of-the-art face detection and embedding generation
+  - Implemented FAISS vector database for high-performance similarity search
+  - Added DuckDB for comprehensive metadata storage and analytics
+  - Built automated web crawler targeting Unsplash, Pexels, and Pixabay
+  - Created advanced UI with crawling controls and detailed statistics
+  - Fixed database concurrency issues for Windows compatibility
+  - System successfully tested and deployed on both Linux and Windows platforms
+
 ## Changelog
 
-- June 26, 2025. Initial setup
+- June 26, 2025. Initial setup and complete rebuild with AI components
 
 ## User Preferences
 

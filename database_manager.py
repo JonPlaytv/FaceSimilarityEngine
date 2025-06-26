@@ -30,7 +30,27 @@ class DatabaseManager:
     def initialize_database(self):
         """Initialize DuckDB connection and create tables"""
         try:
-            self.conn = duckdb.connect(self.db_path)
+            # Create data directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+            
+            # Connect to DuckDB database with retry logic for file locks
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    self.conn = duckdb.connect(self.db_path)
+                    break
+                except Exception as e:
+                    if attempt < max_retries - 1 and ("another process" in str(e).lower() or "verwendet wird" in str(e)):
+                        logging.warning(f"Database locked, retrying in 2 seconds... (attempt {attempt + 1})")
+                        import time
+                        time.sleep(2)
+                        continue
+                    else:
+                        # If still locked after retries, use in-memory database
+                        logging.warning(f"Cannot access database file, using in-memory database: {e}")
+                        self.conn = duckdb.connect(':memory:')
+                        break
+            
             self.create_tables()
             logging.info("Database connection established and tables created")
             
