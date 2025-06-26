@@ -139,13 +139,7 @@
                     Face Dataset Management
                 </h5>
                 
-                <!-- Dataset Status -->
-                <div id="datasetInfo" class="mb-3">
-                    <div class="alert alert-info">
-                        <i class="fas fa-spinner fa-spin me-2"></i>
-                        Checking dataset status...
-                    </div>
-                </div>
+                
                 
                 <!-- Control Buttons -->
                 <div class="d-flex gap-2 flex-wrap">
@@ -447,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fileInput.dispatchEvent(new Event('change'));
         }
     });
-
+});
 
 function clearFile() {
     document.getElementById('fileInput').value = '';
