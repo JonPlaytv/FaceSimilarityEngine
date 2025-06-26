@@ -1298,6 +1298,7 @@ dependencies = [
     { name = "requests" },
     { name = "scikit-learn" },
     { name = "selenium" },
+    { name = "sqlalchemy" },
     { name = "webdriver-manager" },
     { name = "werkzeug" },
 ]
@@ -1321,6 +1322,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.4" },
     { name = "scikit-learn", specifier = ">=1.7.0" },
     { name = "selenium", specifier = ">=4.33.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.41" },
     { name = "webdriver-manager", specifier = ">=4.0.2" },
     { name = "werkzeug", specifier = ">=3.1.3" },
 ]

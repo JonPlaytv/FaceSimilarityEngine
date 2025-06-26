@@ -11,6 +11,7 @@ from faiss_search_engine import FAISSSearchEngine
 from database_manager import DatabaseManager
 from web_crawler import WebCrawler
 from image_processor import ImageProcessor
+from models import DatabaseManager as PostgreSQLManager
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -36,7 +37,16 @@ for folder in [UPLOAD_FOLDER, DATASET_FOLDER, THUMBNAILS_FOLDER]:
 # Initialize advanced components
 face_engine = InsightFaceEngine()
 search_engine = FAISSSearchEngine(embedding_dim=512)
-db_manager = DatabaseManager()
+db_manager = DatabaseManager()  # DuckDB for analytics
+
+# Initialize PostgreSQL if available
+postgres_db = None
+try:
+    postgres_db = PostgreSQLManager()  # PostgreSQL for structured data
+    logging.info("PostgreSQL database connected successfully")
+except Exception as e:
+    logging.warning(f"PostgreSQL not available, using DuckDB only: {e}")
+
 web_crawler = WebCrawler()
 image_processor = ImageProcessor()
 

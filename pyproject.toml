@@ -21,6 +21,7 @@ dependencies = [
     "requests>=2.32.4",
     "scikit-learn>=1.7.0",
     "selenium>=4.33.0",
+    "sqlalchemy>=2.0.41",
     "webdriver-manager>=4.0.2",
     "werkzeug>=3.1.3",
 ]

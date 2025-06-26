@@ -22,7 +22,8 @@ This is an advanced automated face search system that crawls real face images fr
 
 ### Data Storage
 - **Vector Database**: FAISS index for 512-dimensional face embeddings
-- **Metadata Database**: DuckDB for images, faces, search queries, and crawling sessions
+- **Primary Database**: PostgreSQL for structured data, face metadata, and user interactions
+- **Analytics Database**: DuckDB for fast analytical queries and aggregations
 - **File Storage**: Organized filesystem for crawled images, uploads, and thumbnails
 - **Model Storage**: InsightFace ONNX models for face detection and recognition
 
