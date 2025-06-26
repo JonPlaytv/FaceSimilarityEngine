@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-search text-info me-3"></i>
+                Face Similarity Search
+            </h1>
+            <p class="lead text-muted">
+                Upload a photo to find visually similar faces from our ethical sample dataset
+            </p>
+        </div>
+
+        <!-- Dataset Initialization Card -->
+        <div class="card mb-4" id="datasetCard">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fas fa-database me-2"></i>
+                    Dataset Status
+                </h5>
+                <p class="card-text" id="datasetInfo">
+                    Checking dataset status...
+                </p>
+                <button class="btn btn-info" id="initializeBtn" onclick="initializeDataset()" disabled>
+                    <i class="fas fa-cog me-2"></i>
+                    Initialize Dataset
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Form -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="fas fa-upload me-2"></i>
+                    Upload Your Photo
+                </h5>
+                
+                <form id="uploadForm" action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted mb-3">Drag & Drop or Click to Upload</h5>
+                        <p class="text-muted mb-3">
+                            Supported formats: PNG, JPG, JPEG, GIF, BMP<br>
+                            Maximum file size: 16MB
+                        </p>
+                        
+                        <input type="file" 
+                               class="form-control d-none" 
+                               id="fileInput" 
+                               name="file" 
+                               accept="image/*" 
+                               required>
+                        
+                        <button type="button" class="btn btn-outline-info" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open me-2"></i>
+                            Choose File
+                        </button>
+                    </div>
+                    
+                    <!-- File Info -->
+                    <div id="fileInfo" class="mt-3" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-file-image text-info me-2"></i>
+                            <span id="fileName" class="text-muted"></span>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearFile()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
+                            <i class="fas fa-search me-2"></i>
+                            Find Similar Faces
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Progress Bar -->
+                <div class="progress-container mt-4">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: 0%">
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">Processing your image...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    How It Works
+                </h5>
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-upload fa-2x text-info mb-2"></i>
+                        <h6>1. Upload</h6>
+                        <small class="text-muted">Upload a clear photo with visible faces</small>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-eye fa-2x text-info mb-2"></i>
+                        <h6>2. Detect</h6>
+                        <small class="text-muted">AI detects faces and extracts features</small>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-search fa-2x text-info mb-2"></i>
+                        <h6>3. Match</h6>
+                        <small class="text-muted">Find similar faces in our dataset</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Tips for Best Results
+                </h5>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Use clear, well-lit photos</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Ensure faces are clearly visible</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Avoid heavily filtered or edited images</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Higher resolution images work better</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check dataset status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkDatasetStatus();
+});
+
+function checkDatasetStatus() {
+    fetch('/dataset_status')
+        .then(response => response.json())
+        .then(data => {
+            const datasetInfo = document.getElementById('datasetInfo');
+            const initializeBtn = document.getElementById('initializeBtn');
+            const statusBadge = document.getElementById('datasetStatusBadge');
+            const statusText = document.getElementById('datasetStatusText');
+            
+            if (data.initialized && data.size > 0) {
+                datasetInfo.innerHTML = `
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    Dataset ready with <strong>${data.size}</strong> faces
+                `;
+                initializeBtn.style.display = 'none';
+                statusBadge.className = 'badge bg-success';
+                statusText.textContent = `${data.size} faces ready`;
+                
+                // Enable upload form
+                document.getElementById('submitBtn').disabled = false;
+            } else {
+                datasetInfo.innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    No dataset found. Please add sample images to <code>static/dataset/</code> and initialize.
+                `;
+                initializeBtn.disabled = false;
+                statusBadge.className = 'badge bg-warning';
+                statusText.textContent = 'Dataset not initialized';
+                
+                // Disable upload form
+                document.getElementById('submitBtn').disabled = true;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking dataset status:', error);
+            document.getElementById('datasetInfo').innerHTML = `
+                <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                Error checking dataset status
+            `;
+        });
+}
+
+function initializeDataset() {
+    const initializeBtn = document.getElementById('initializeBtn');
+    const originalText = initializeBtn.innerHTML;
+    
+    initializeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Initializing...';
+    initializeBtn.disabled = true;
+    
+    fetch('/initialize_dataset', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                checkDatasetStatus(); // Refresh status
+                // Show success message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+                alert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.getElementById('datasetCard').appendChild(alert);
+            } else {
+                // Show error message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                alert.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.getElementById('datasetCard').appendChild(alert);
+            }
+        })
+        .catch(error => {
+            console.error('Error initializing dataset:', error);
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Error initializing dataset. Please try again.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('datasetCard').appendChild(alert);
+        })
+        .finally(() => {
+            initializeBtn.innerHTML = originalText;
+            initializeBtn.disabled = false;
+        });
+}
+</script>
+{% endblock %}
