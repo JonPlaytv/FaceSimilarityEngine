@@ -14,20 +14,48 @@
             </p>
         </div>
 
-        <!-- Dataset Initialization Card -->
+        <!-- Advanced Dataset Management Card -->
         <div class="card mb-4" id="datasetCard">
-            <div class="card-body text-center">
+            <div class="card-body">
                 <h5 class="card-title">
                     <i class="fas fa-database me-2"></i>
-                    Dataset Status
+                    AI-Powered Dataset Management
                 </h5>
                 <p class="card-text" id="datasetInfo">
                     Checking dataset status...
                 </p>
-                <button class="btn btn-info" id="initializeBtn" onclick="initializeDataset()" disabled>
-                    <i class="fas fa-cog me-2"></i>
-                    Initialize Dataset
-                </button>
+                
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <button class="btn btn-primary" id="crawlBtn" onclick="startCrawling()" disabled>
+                        <i class="fas fa-globe me-2"></i>
+                        Crawl Images
+                    </button>
+                    <button class="btn btn-info" id="initializeBtn" onclick="initializeDataset()" disabled>
+                        <i class="fas fa-cog me-2"></i>
+                        Initialize Dataset
+                    </button>
+                </div>
+                
+                <!-- Advanced Statistics -->
+                <div class="row mt-3" id="advancedStats" style="display: none;">
+                    <div class="col-md-3 text-center">
+                        <div class="h5 text-primary mb-1" id="totalImages">0</div>
+                        <small class="text-muted">Total Images</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="h5 text-success mb-1" id="totalFaces">0</div>
+                        <small class="text-muted">Detected Faces</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="h5 text-info mb-1" id="avgConfidence">0%</div>
+                        <small class="text-muted">Avg Confidence</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="h5 text-warning mb-1" id="crawledCount">0</div>
+                        <small class="text-muted">Crawled Images</small>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -1,33 +1,30 @@
-# Face Similarity Search System
+# Automated Face Search System
 
 ## Overview
 
-This is an ethical face similarity search system built with Flask and OpenCV that allows users to upload photos and find visually similar faces from a sample dataset. The application focuses on privacy-first design, using only user-provided sample datasets without web crawling or unauthorized data collection.
+This is an advanced automated face search system that crawls real face images from public websites, generates high-quality embeddings using InsightFace, and provides lightning-fast similarity search using FAISS vector database. The system stores comprehensive metadata in DuckDB and automatically builds searchable face datasets from public image sources.
 
 ## System Architecture
 
 ### Backend Architecture
 - **Web Framework**: Flask with Gunicorn for production deployment
-- **Computer Vision**: OpenCV for face detection and feature extraction
+- **AI Face Processing**: InsightFace with ONNX models for state-of-the-art face detection and embedding generation
+- **Vector Search**: FAISS (Facebook AI Similarity Search) for high-performance similarity search
+- **Database**: DuckDB for fast analytical queries and metadata storage
+- **Web Crawling**: Automated crawler using Selenium and BeautifulSoup for image collection
 - **Image Processing**: PIL (Pillow) for image manipulation and thumbnail generation
-- **Feature Extraction**: Multi-modal approach combining:
-  - Local Binary Patterns (LBP)
-  - Intensity Histograms
-  - Edge Features
-  - Geometric Properties
-- **Similarity Matching**: Combination of cosine similarity and Euclidean distance
 
 ### Frontend Architecture
 - **UI Framework**: Bootstrap with dark theme
-- **Interactive Features**: Drag-and-drop file upload
+- **Interactive Features**: Drag-and-drop file upload, automated crawling controls
 - **Icons**: Font Awesome for visual elements
-- **Responsive Design**: Mobile-friendly interface
+- **Responsive Design**: Mobile-friendly interface with advanced statistics display
 
 ### Data Storage
-- **File Storage**: Local filesystem for uploaded images and thumbnails
-- **Embeddings Database**: JSON file (`data/face_embeddings.json`) for face feature vectors
-- **Temporary Storage**: Upload folder for processing images
-- **Static Assets**: Organized directory structure for dataset images and thumbnails
+- **Vector Database**: FAISS index for 512-dimensional face embeddings
+- **Metadata Database**: DuckDB for images, faces, search queries, and crawling sessions
+- **File Storage**: Organized filesystem for crawled images, uploads, and thumbnails
+- **Model Storage**: InsightFace ONNX models for face detection and recognition
 
 ## Key Components
 

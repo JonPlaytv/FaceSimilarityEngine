@@ -4,22 +4,19 @@ import logging
 from typing import List, Tuple, Optional
 
 class FaceDetector:
-    """Face detection and basic feature extraction using OpenCV"""
+    """Fallback face detection using OpenCV Haar Cascades"""
     
     def __init__(self):
         """Initialize face detector with OpenCV's Haar Cascade"""
         # Load the face cascade classifier
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         
-        # Initialize face recognizer for feature extraction
-        self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
-        
         # Parameters for face detection
         self.scale_factor = 1.1
         self.min_neighbors = 5
         self.min_size = (30, 30)
         
-        logging.info("FaceDetector initialized successfully")
+        logging.info("FaceDetector (OpenCV fallback) initialized successfully")
     
     def detect_faces(self, image: np.ndarray) -> List[Tuple[int, int, int, int]]:
         """
