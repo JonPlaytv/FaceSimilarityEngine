@@ -67,26 +67,7 @@ class WebCrawler:
     
     def get_target_websites(self) -> List[Dict]:
         """Get list of target websites for crawling"""
-        return [
-            {
-                'name': 'Bogy',
-                'base_url': 'https://bodensee-gymnasium.de/fach/musik/bogy-laesst-das-stadttheater-beim-sommerkonzert-strahlen/',
-                'type': 'egal',
-                'max_pages': 50
-            },
-            {
-                'name': 'Pexels People',
-                'base_url': 'https://www.pexels.com/search/people/',
-                'type': 'pexels',
-                'max_pages': 5
-            },
-            {
-                'name': 'Pixabay People',
-                'base_url': 'https://pixabay.com/photos/search/people/',
-                'type': 'pixabay',
-                'max_pages': 3
-            }
-        ]
+        return []
     
     def crawl_websites(self, max_images: int = 100, custom_url: str = None) -> Dict:
         """
@@ -122,6 +103,11 @@ class WebCrawler:
         
         # Add default websites
         websites_to_crawl.extend(self.get_target_websites())
+        
+        # Handle case where no websites to crawl
+        if not websites_to_crawl:
+            logging.warning("No websites to crawl. Please provide a custom URL.")
+            return self.crawl_stats
         
         images_per_site = max(1, max_images // len(websites_to_crawl))
         total_collected = 0
@@ -279,39 +265,164 @@ class WebCrawler:
         return collected
     
     def crawl_generic(self, website: Dict, max_images: int) -> int:
-        """Generic crawling method for other websites"""
+        """Enhanced generic crawling method for other websites"""
         collected = 0
+        processed_urls = set()
         
         try:
-            response = self.session.get(website['base_url'])
-            soup = BeautifulSoup(response.content, 'html.parser')
+            # Use selenium for dynamic content if available
+            if self.driver:
+                return self._crawl_generic_selenium(website, max_images)
             
-            # Find all image elements
-            img_elements = soup.find_all('img')
+            # Start with the main page
+            urls_to_process = [website['base_url']]
             
-            for img in img_elements[:max_images * 2]:  # Get more to filter later
-                if collected >= max_images:
-                    break
+            while urls_to_process and collected < max_images:
+                current_url = urls_to_process.pop(0)
+                
+                if current_url in processed_urls:
+                    continue
                     
+                processed_urls.add(current_url)
+                logging.info(f"Processing URL: {current_url}")
+                
                 try:
-                    img_url = img.get('src') or img.get('data-src')
-                    if img_url:
-                        # Convert relative URLs to absolute
-                        img_url = urljoin(website['base_url'], img_url)
+                    response = self.session.get(current_url, timeout=10)
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    
+                    # Find all image elements with various attributes
+                    img_selectors = [
+                        'img[src]',
+                        'img[data-src]', 
+                        'img[data-lazy]',
+                        'img[data-original]',
+                        '[style*="background-image"]'
+                    ]
+                    
+                    for selector in img_selectors:
+                        img_elements = soup.select(selector)
                         
-                        if self.download_image(img_url, 'generic'):
-                            collected += 1
-                            
-                        time.sleep(1)
-                        
+                        for img in img_elements:
+                            if collected >= max_images:
+                                break
+                                
+                            try:
+                                # Extract image URL from various attributes
+                                img_url = (img.get('src') or 
+                                         img.get('data-src') or 
+                                         img.get('data-lazy') or 
+                                         img.get('data-original'))
+                                
+                                # Handle background-image CSS
+                                if not img_url and 'background-image' in (img.get('style') or ''):
+                                    style = img.get('style')
+                                    import re
+                                    match = re.search(r'background-image:\s*url\(["\']?([^"\']+)["\']?\)', style)
+                                    if match:
+                                        img_url = match.group(1)
+                                
+                                if img_url:
+                                    # Convert relative URLs to absolute
+                                    img_url = urljoin(current_url, img_url)
+                                    
+                                    if self.download_image(img_url, 'generic'):
+                                        collected += 1
+                                        logging.info(f"Downloaded image {collected}/{max_images}")
+                                        
+                                    time.sleep(0.5)  # Reduced delay for efficiency
+                                    
+                            except Exception as e:
+                                logging.warning(f"Error processing image: {e}")
+                                continue
+                    
+                    # Look for additional pages to crawl (pagination, galleries)
+                    if collected < max_images and len(processed_urls) < 5:  # Limit depth
+                        additional_links = self._find_image_pages(soup, current_url)
+                        for link in additional_links[:3]:  # Limit to 3 additional pages
+                            if link not in processed_urls:
+                                urls_to_process.append(link)
+                    
                 except Exception as e:
-                    logging.warning(f"Error processing generic image: {e}")
+                    logging.warning(f"Error processing URL {current_url}: {e}")
                     continue
             
         except Exception as e:
             logging.error(f"Error in generic crawling: {e}")
         
         return collected
+    
+    def _crawl_generic_selenium(self, website: Dict, max_images: int) -> int:
+        """Use Selenium for dynamic content crawling"""
+        collected = 0
+        
+        try:
+            self.driver.get(website['base_url'])
+            time.sleep(3)
+            
+            # Scroll multiple times to load dynamic content
+            for scroll in range(10):  # Increased scrolling
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(2)
+                
+                # Check if we've loaded enough images
+                images = self.driver.find_elements(By.TAG_NAME, 'img')
+                if len(images) > max_images * 2:
+                    break
+            
+            # Find all image elements
+            images = self.driver.find_elements(By.TAG_NAME, 'img')
+            
+            for img in images:
+                if collected >= max_images:
+                    break
+                    
+                try:
+                    # Try different attributes
+                    img_url = (img.get_attribute('src') or 
+                             img.get_attribute('data-src') or 
+                             img.get_attribute('data-lazy') or 
+                             img.get_attribute('data-original'))
+                    
+                    if img_url and self.download_image(img_url, 'generic'):
+                        collected += 1
+                        logging.info(f"Selenium downloaded image {collected}/{max_images}")
+                        
+                    time.sleep(0.5)
+                    
+                except Exception as e:
+                    logging.warning(f"Error processing Selenium image: {e}")
+                    continue
+            
+        except Exception as e:
+            logging.error(f"Error in Selenium crawling: {e}")
+        
+        return collected
+    
+    def _find_image_pages(self, soup, base_url: str) -> list:
+        """Find additional pages that might contain images"""
+        additional_urls = []
+        
+        # Look for pagination links
+        pagination_selectors = [
+            'a[href*="page"]',
+            'a[href*="next"]', 
+            'a[class*="next"]',
+            'a[class*="page"]',
+            'a[href*="gallery"]',
+            'a[href*="photo"]',
+            'a[href*="image"]'
+        ]
+        
+        for selector in pagination_selectors:
+            links = soup.select(selector)
+            for link in links[:5]:  # Limit links per selector
+                href = link.get('href')
+                if href:
+                    full_url = urljoin(base_url, href)
+                    if full_url not in additional_urls:
+                        additional_urls.append(full_url)
+        
+        return additional_urls
     
     def download_image(self, url: str, source: str) -> bool:
         """

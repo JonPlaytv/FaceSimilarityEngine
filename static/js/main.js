@@ -10,13 +10,30 @@ function initializeUploadHandlers() {
     const fileInput = document.getElementById('fileInput');
     const uploadForm = document.getElementById('uploadForm');
     const submitBtn = document.getElementById('submitBtn');
+    const chooseFileBtn = document.getElementById('chooseFileBtn');
 
     if (!uploadArea || !fileInput) return;
+    
+    // Prevent multiple initializations
+    if (fileInput.dataset.initialized === 'true') return;
+    fileInput.dataset.initialized = 'true';
 
-    // File input change handler
-    fileInput.addEventListener('change', function(e) {
-        handleFileSelection(e.target.files[0]);
-    });
+    // Choose File button handler
+    if (chooseFileBtn) {
+        chooseFileBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            fileInput.click();
+        });
+    }
+
+    // Define the handler outside of any other function so it's the same reference
+    function onFileInputChange(e) {
+    handleFileSelection(e.target.files[0]);
+}
+
+    // Then before adding:
+    fileInput.removeEventListener('change', onFileInputChange); // safe even if not added yet
+    fileInput.addEventListener('change', onFileInputChange);
 
     // Drag and drop handlers
     uploadArea.addEventListener('dragover', function(e) {
@@ -63,9 +80,9 @@ function handleFileSelection(file) {
     if (!file) return;
 
     // Validate file type
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp', 'image/avif', 'video/webm'];
     if (!allowedTypes.includes(file.type)) {
-        showAlert('Please select a valid image file (PNG, JPG, JPEG, GIF, BMP).', 'error');
+        showAlert('Please select a valid image file (PNG, JPG, JPEG, GIF, BMP, WebP, AVIF, WebM).', 'error');
         clearFile();
         return;
     }
@@ -88,6 +105,12 @@ function handleFileSelection(file) {
         fileInfo.style.display = 'block';
     }
 
+    // Hide upload area text when file is selected
+    const uploadAreaTitle = document.querySelector('.upload-area h5');
+    const uploadAreaText = document.querySelector('.upload-area p');
+    if (uploadAreaTitle) uploadAreaTitle.style.display = 'none';
+    if (uploadAreaText) uploadAreaText.style.display = 'none';
+
     // Enable submit button if dataset is ready
     checkDatasetStatus().then(isReady => {
         if (submitBtn) {
@@ -109,6 +132,12 @@ function clearFile() {
     if (fileInfo) fileInfo.style.display = 'none';
     if (submitBtn) submitBtn.disabled = true;
     if (imagePreview) imagePreview.style.display = 'none';
+    
+    // Show upload area text
+    const uploadAreaTitle = document.querySelector('.upload-area h5');
+    const uploadAreaText = document.querySelector('.upload-area p');
+    if (uploadAreaTitle) uploadAreaTitle.style.display = 'block';
+    if (uploadAreaText) uploadAreaText.style.display = 'block';
 }
 
 function previewImage(file) {

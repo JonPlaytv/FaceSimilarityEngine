@@ -245,6 +245,8 @@ def crawl_images():
         return jsonify({
             'success': True,
             'message': f'Successfully crawled {len(crawled_images)} images and detected {processed_count} faces.',
+            'images_crawled': len(crawled_images),
+            'faces_detected': processed_count,
             'stats': crawl_stats
         })
         

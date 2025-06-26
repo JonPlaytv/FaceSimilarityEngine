@@ -52,7 +52,7 @@
                         <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted mb-3">Drag & Drop or Click to Upload</h5>
                         <p class="text-muted mb-3">
-                            Supported formats: PNG, JPG, JPEG, GIF, BMP<br>
+                            Supported formats: PNG, JPG, JPEG, GIF, BMP, WebP, AVIF, WebM<br>
                             Maximum file size: 16MB
                         </p>
                         
@@ -87,7 +87,8 @@
                             Find Similar Faces
                         </button>
                     </div>
-                </form>
+                    
+                   
                 
                 <!-- Progress Bar -->
                 <div class="progress-container mt-4">
@@ -139,15 +140,35 @@
                     Face Dataset Management
                 </h5>
                 
-                
+                <!-- Custom URL Input -->
+                <div class="mb-3">
+                    <label for="customUrlInput" class="form-label">
+                        <i class="fas fa-link me-2"></i>
+                        Custom Website URL (optional)
+                    </label>
+                    <div class="input-group">
+                        <input type="url" 
+                               class="form-control" 
+                               id="customUrlInput" 
+                               placeholder="https://example.com - Enter a webpage to crawl for images"
+                               title="Enter a website URL to crawl for images along with the default sources">
+                        <button class="btn btn-outline-secondary" type="button" id="clearUrlBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        The crawler will search this page for images in addition to default sources like Pexels and Pixabay
+                    </div>
+                </div>
                 
                 <!-- Control Buttons -->
                 <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" class="btn btn-primary" id="initializeBtn" onclick="initializeDataset()">
+                    <button type="button" class="btn btn-primary" id="initializeBtn">
                         <i class="fas fa-play me-2"></i>
                         Initialize Dataset
                     </button>
-                    <button type="button" class="btn btn-secondary" id="crawlBtn" onclick="startCrawling()">
+                    <button type="button" class="btn btn-secondary" id="crawlBtn">
                         <i class="fas fa-spider me-2"></i>
                         Crawl Images
                     </button>
@@ -199,6 +220,26 @@
 // Check dataset status on page load
 document.addEventListener('DOMContentLoaded', function() {
     checkDatasetStatus();
+    
+    // Add event listeners for dataset management buttons
+    const crawlBtn = document.getElementById('crawlBtn');
+    const initializeBtn = document.getElementById('initializeBtn');
+    const clearUrlBtn = document.getElementById('clearUrlBtn');
+    
+    if (crawlBtn && !crawlBtn.dataset.listenerAdded) {
+        crawlBtn.addEventListener('click', startCrawling);
+        crawlBtn.dataset.listenerAdded = 'true';
+    }
+    
+    if (initializeBtn && !initializeBtn.dataset.listenerAdded) {
+        initializeBtn.addEventListener('click', initializeDataset);
+        initializeBtn.dataset.listenerAdded = 'true';
+    }
+    
+    if (clearUrlBtn && !clearUrlBtn.dataset.listenerAdded) {
+        clearUrlBtn.addEventListener('click', clearCustomUrl);
+        clearUrlBtn.dataset.listenerAdded = 'true';
+    }
 });
 
 function checkDatasetStatus() {
@@ -254,10 +295,14 @@ function checkDatasetStatus() {
 
 function startCrawling() {
     const crawlBtn = document.getElementById('crawlBtn');
+    const customUrlInput = document.getElementById('customUrlInput');
     const originalText = crawlBtn.innerHTML;
     
     crawlBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Crawling Images...';
     crawlBtn.disabled = true;
+    
+    // Get custom URL if provided
+    const customUrl = customUrlInput ? customUrlInput.value.trim() : '';
     
     fetch('/crawl_images', {
         method: 'POST',
@@ -265,7 +310,8 @@ function startCrawling() {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            max_images: 50
+            max_images: 50,
+            custom_url: customUrl
         })
     })
     .then(response => response.json())
@@ -369,79 +415,14 @@ function initializeDataset() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const fileInput = document.getElementById('fileInput');
-    const uploadArea = document.getElementById('uploadArea');
-    const chooseFileBtn = document.getElementById('chooseFileBtn');
+// File upload functionality is handled by main.js
 
-    // 1. Enable choose file button
-    chooseFileBtn.addEventListener('click', function () {
-        fileInput.click();
-    });
-
-    // 2. File selected handler
-    fileInput.addEventListener('change', function (e) {
-        const file = e.target.files[0];
-        if (file) {
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileInfo').style.display = 'block';
-            document.getElementById('submitBtn').disabled = false;
-            document.querySelector('.upload-area h5').style.display = 'none';
-            document.querySelector('.upload-area p').style.display = 'none';
-        }
-    });
-
-    // 3. Drag & Drop
-    uploadArea.addEventListener('click', function (e) {
-        e.preventDefault();
-        fileInput.click();
-    });
-
-    uploadArea.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        uploadArea.classList.add('drag-over');
-    });
-
-    uploadArea.addEventListener('dragleave', function (e) {
-        e.preventDefault();
-        uploadArea.classList.remove('drag-over');
-    });
-
-    uploadArea.addEventListener('drop', function (e) {
-        e.preventDefault();
-        uploadArea.classList.remove('drag-over');
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            fileInput.dispatchEvent(new Event('change'));
-        }
-    });
-});
-
-    // Drag and drop functionality
-    uploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        uploadArea.classList.add('drag-over');
-    });
-
-    uploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('drag-over');
-    });
-
-    uploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('drag-over');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            // Trigger change event
-            fileInput.dispatchEvent(new Event('change'));
-        }
-    });
-});
+function clearCustomUrl() {
+    const customUrlInput = document.getElementById('customUrlInput');
+    if (customUrlInput) {
+        customUrlInput.value = '';
+    }
+}
 
 function clearFile() {
     document.getElementById('fileInput').value = '';
