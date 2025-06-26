@@ -18,7 +18,7 @@ class InsightFaceEngine:
         
         # Detection parameters - set before initialization
         self.detection_size = (640, 640)
-        self.confidence_threshold = 0.3
+        self.confidence_threshold = 0.1
         self.embedding_dim = 512
         
         self.initialize_models()
@@ -103,7 +103,7 @@ class InsightFaceEngine:
                         'confidence': confidence,
                         'landmarks': face.kps.astype(int) if hasattr(face, 'kps') else None,
                         'embedding': face.normed_embedding if hasattr(face, 'normed_embedding') else None,
-                        'age': int(face.age) if hasattr(face, 'age') else None,
+                        'age': int(face.age) if hasattr(face, 'age') and face.age is not None else None,
                         'gender': face.sex if hasattr(face, 'sex') else None,
                         'face_id': i
                     }

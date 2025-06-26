@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function checkDatasetStatus() {
-    fetch('/dataset-status')
+    fetch('/dataset_status')
         .then(response => response.json())
         .then(data => {
             const datasetInfo = document.getElementById('datasetInfo');
@@ -285,7 +285,7 @@ function startCrawling() {
     crawlBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Crawling Images...';
     crawlBtn.disabled = true;
     
-    fetch('/crawl-images', {
+    fetch('/crawl_images', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -395,54 +395,54 @@ function initializeDataset() {
     });
 }
 
-function initializeDataset() {
-    const initializeBtn = document.getElementById('initializeBtn');
-    const originalText = initializeBtn.innerHTML;
+// File handling functions
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Show file info
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileInfo').style.display = 'block';
+        document.getElementById('submitBtn').disabled = false;
+        
+        // Hide upload area text
+        document.querySelector('.upload-area h5').style.display = 'none';
+        document.querySelector('.upload-area p').style.display = 'none';
+    }
+});
+
+// Drag and drop functionality
+const uploadArea = document.getElementById('uploadArea');
+
+uploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
     
-    initializeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Initializing...';
-    initializeBtn.disabled = true;
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('fileInput').files = files;
+        // Trigger change event
+        document.getElementById('fileInput').dispatchEvent(new Event('change'));
+    }
+});
+
+function clearFile() {
+    document.getElementById('fileInput').value = '';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('submitBtn').disabled = true;
     
-    fetch('/initialize_dataset', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                checkDatasetStatus(); // Refresh status
-                // Show success message
-                const alert = document.createElement('div');
-                alert.className = 'alert alert-success alert-dismissible fade show mt-3';
-                alert.innerHTML = `
-                    <i class="fas fa-check-circle me-2"></i>
-                    ${data.message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.getElementById('datasetCard').appendChild(alert);
-            } else {
-                // Show error message
-                const alert = document.createElement('div');
-                alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
-                alert.innerHTML = `
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    ${data.message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.getElementById('datasetCard').appendChild(alert);
-            }
-        })
-        .catch(error => {
-            console.error('Error initializing dataset:', error);
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
-            alert.innerHTML = `
-                <i class="fas fa-exclamation-circle me-2"></i>
-                Error initializing dataset. Please try again.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.getElementById('datasetCard').appendChild(alert);
-        })
-        .finally(() => {
-            initializeBtn.innerHTML = originalText;
-            initializeBtn.disabled = false;
-        });
+    // Show upload area text
+    document.querySelector('.upload-area h5').style.display = 'block';
+    document.querySelector('.upload-area p').style.display = 'block';
 }
 </script>
 {% endblock %}
