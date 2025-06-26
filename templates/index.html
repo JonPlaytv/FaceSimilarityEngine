@@ -14,28 +14,8 @@
             </p>
         </div>
 
-        <!-- Advanced Dataset Management Card -->
-        <div class="card mb-4" id="datasetCard">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-database me-2"></i>
-                    AI-Powered Dataset Management
-                </h5>
-                <p class="card-text" id="datasetInfo">
-                    Checking dataset status...
-                </p>
+        
                 
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2 justify-content-center flex-wrap">
-                    <button class="btn btn-primary" id="crawlBtn" onclick="startCrawling()" disabled>
-                        <i class="fas fa-globe me-2"></i>
-                        Crawl Images
-                    </button>
-                    <button class="btn btn-info" id="initializeBtn" onclick="initializeDataset()" disabled>
-                        <i class="fas fa-cog me-2"></i>
-                        Initialize Dataset
-                    </button>
-                </div>
                 
                 <!-- Advanced Statistics -->
                 <div class="row mt-3" id="advancedStats" style="display: none;">
@@ -467,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fileInput.dispatchEvent(new Event('change'));
         }
     });
-});
+
 
 function clearFile() {
     document.getElementById('fileInput').value = '';
