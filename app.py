@@ -129,7 +129,10 @@ def upload_file():
                     'similarity_score': round(result['similarity'] * 100, 1),
                     'confidence': metadata.get('confidence', 0),
                     'age': metadata.get('age'),
-                    'gender': metadata.get('gender')
+                    'gender': metadata.get('gender'),
+                    # Add detailed similarity metrics if available
+                    'cosine_similarity': round(result.get('cosine', result['similarity']) * 100, 1) if 'cosine' in result or 'similarity' in result else None,
+                    'euclidean_similarity': round(result.get('euclidean', 1 - result['similarity']) * 100, 1) if 'euclidean' in result or 'similarity' in result else None
                 })
             
             # Generate thumbnail for uploaded image
@@ -501,15 +504,5 @@ def too_large(e):
     flash('File is too large. Please upload an image smaller than 16MB.', 'error')
     return redirect(url_for('index'))
 
-@app.errorhandler(404)
-def not_found(e):
-    return render_template('index.html'), 404
-
-@app.errorhandler(500)
-def server_error(e):
-    logging.error(f"Server error: {str(e)}")
-    flash('An internal server error occurred. Please try again.', 'error')
-    return redirect(url_for('index'))
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5050, debug=True)
