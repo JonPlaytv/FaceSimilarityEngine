@@ -1,0 +1,47 @@
+. Will use requests only.
+INFO:root:WebCrawler initialized successfully
+INFO:root:ImageProcessor initialized
+INFO:root:Scanning dataset folder: static/dataset
+INFO:root:Found dataset image: sample_face_1.png
+INFO:root:Found dataset image: sample_face_2.png
+INFO:root:Found dataset image: sample_face_3.png
+INFO:root:Found dataset image: sample_face_4.png
+INFO:root:Found dataset image: sample_face_5.png
+INFO:root:Processing 5 images total
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+INFO:root:Scanning dataset folder: static/dataset
+INFO:root:Found dataset image: sample_face_1.png
+INFO:root:Found dataset image: sample_face_2.png
+INFO:root:Found dataset image: sample_face_3.png
+INFO:root:Found dataset image: sample_face_4.png
+INFO:root:Found dataset image: sample_face_5.png
+INFO:root:Processing 5 images total
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
+ERROR:root:Error adding image record: Constraint Error: NOT NULL constraint failed: images.id
+DEBUG:root:Detected 0 faces with confidence >= 0.5
+DEBUG:root:Updated processing status for image -1
