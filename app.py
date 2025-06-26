@@ -220,14 +220,22 @@ def initialize_dataset():
         dataset_images = []
         dataset_path = DATASET_FOLDER
         
+        logging.info(f"Scanning dataset folder: {dataset_path}")
+        
         # Get all image files from dataset folder
-        for filename in os.listdir(dataset_path):
-            if allowed_file(filename):
-                filepath = os.path.join(dataset_path, filename)
-                dataset_images.append(filepath)
+        if os.path.exists(dataset_path):
+            for filename in os.listdir(dataset_path):
+                if allowed_file(filename):
+                    filepath = os.path.join(dataset_path, filename)
+                    dataset_images.append(filepath)
+                    logging.info(f"Found dataset image: {filename}")
         
         # Process crawled images if available
-        crawled_images = web_crawler.get_crawled_images()
+        crawled_images = []
+        try:
+            crawled_images = web_crawler.get_crawled_images()
+        except Exception as e:
+            logging.warning(f"Could not get crawled images: {e}")
         
         all_images = dataset_images + crawled_images
         
@@ -237,14 +245,22 @@ def initialize_dataset():
                 'message': 'No images found. Use "Crawl Images" to get data or add images to static/dataset/'
             })
         
+        logging.info(f"Processing {len(all_images)} images total")
+        
         # Process all images with InsightFace and store in FAISS/DuckDB
         processed_count = process_image_dataset(all_images)
+        
+        # Get updated statistics
+        faiss_stats = search_engine.get_stats()
+        db_stats = db_manager.get_database_stats()
         
         return jsonify({
             'success': True,
             'message': f'Successfully processed {processed_count} faces from {len(all_images)} images.',
             'dataset_images': len(dataset_images),
-            'crawled_images': len(crawled_images)
+            'crawled_images': len(crawled_images),
+            'total_faces': processed_count,
+            'faiss_vectors': faiss_stats.get('total_vectors', 0)
         })
         
     except Exception as e:
