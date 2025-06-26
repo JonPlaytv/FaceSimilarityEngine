@@ -76,6 +76,32 @@ def create_face_like_image(output_path: str, face_id: int):
     img.save(output_path, 'PNG')
     logging.info(f"Created face-like image: {output_path}")
 
+def create_realistic_faces(num_faces: int = 5) -> int:
+    """
+    Create realistic face-like images for crawling simulation
+    
+    Args:
+        num_faces: Number of faces to create
+        
+    Returns:
+        Number of faces actually created
+    """
+    crawl_dir = 'static/crawled_images'
+    os.makedirs(crawl_dir, exist_ok=True)
+    
+    created_count = 0
+    
+    for i in range(num_faces):
+        output_path = os.path.join(crawl_dir, f'generated_face_{i+1}.png')
+        try:
+            create_face_like_image(output_path, i+1)
+            created_count += 1
+        except Exception as e:
+            logging.error(f"Failed to create face {i+1}: {e}")
+    
+    logging.info(f"Created {created_count} realistic face-like images")
+    return created_count
+
 def create_realistic_dataset():
     """Create realistic face-like images for the dataset"""
     dataset_dir = 'static/dataset'

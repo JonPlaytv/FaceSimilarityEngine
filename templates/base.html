@@ -39,16 +39,19 @@
             border-radius: 12px;
             padding: 3rem;
             text-align: center;
-            transition: border-color 0.3s ease;
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .upload-area:hover {
             border-color: var(--bs-info);
+            background-color: rgba(13, 202, 240, 0.05);
         }
         
         .upload-area.drag-over {
             border-color: var(--bs-success);
             background-color: rgba(25, 135, 84, 0.1);
+            transform: scale(1.02);
         }
         
         .progress-container {
