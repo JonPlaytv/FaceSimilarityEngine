@@ -1,6 +1,7 @@
 """
 PostgreSQL database models for the automated face search system
 """
+from sqlalchemy import func
 import os
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, DateTime, LargeBinary, Boolean, ForeignKey, Index
@@ -271,8 +272,7 @@ class DatabaseManager:
                 stats['avg_confidence'] = 0
             
             # Source breakdown
-            sources = session.query(Image.source, session.query(Image).filter(Image.source == Image.source).count()).distinct().all()
-            stats['images_by_source'] = {source: count for source, count in sources}
+            stats['images_by_source'] = dict(session.query(Image.source, func.count(Image.id)).group_by(Image.source).all())
             
             # Recent activity (last 24 hours)
             from datetime import timedelta

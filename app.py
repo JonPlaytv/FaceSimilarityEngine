@@ -24,7 +24,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 UPLOAD_FOLDER = 'static/uploads'
 DATASET_FOLDER = 'static/dataset'
 THUMBNAILS_FOLDER = 'static/thumbnails'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'avif', 'webm'}
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -55,10 +55,117 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def process_image_file(filepath, filename, is_sample=False):
+    """Process an image file for face similarity search"""
+    start_time = time.time()
+    
+    try:
+        # Load and validate image
+        image = cv2.imread(filepath)
+        if image is None:
+            flash('Unable to process the image file.', 'error')
+            if not is_sample and os.path.exists(filepath):
+                os.remove(filepath)
+            return redirect(url_for('index'))
+        
+        # Preprocess image
+        image = face_engine.preprocess_image(image)
+        
+        # Detect faces using InsightFace
+        faces = face_engine.detect_faces(image)
+        
+        if not faces:
+            flash('No faces detected in the image. Please try a different photo.', 'error')
+            if not is_sample and os.path.exists(filepath):
+                os.remove(filepath)
+            return redirect(url_for('index'))
+        
+        # Get embedding for the best face (highest confidence)
+        best_face = max(faces, key=lambda x: x.get('confidence', 0))
+        query_embedding = best_face.get('embedding')
+        
+        if query_embedding is None:
+            flash('Unable to generate face features from the image.', 'error')
+            if not is_sample and os.path.exists(filepath):
+                os.remove(filepath)
+            return redirect(url_for('index'))
+        
+        # Search for similar faces using FAISS
+        similar_results = search_engine.search_similar(query_embedding, top_k=20, threshold=0.3)
+        
+        # Process results for display
+        similar_faces = []
+        for result in similar_results:
+            metadata = result.get('metadata', {})
+            similar_faces.append({
+                'id': result['index'],
+                'thumbnail': metadata.get('thumbnail_path', ''),
+                'source_image': metadata.get('filename', ''),
+                'similarity_score': round(result['similarity'] * 100, 1),
+                'confidence': metadata.get('confidence', 0),
+                'age': metadata.get('age'),
+                'gender': metadata.get('gender'),
+                'cosine_similarity': round(result.get('cosine', result['similarity']) * 100, 1),
+                'euclidean_similarity': round(result.get('euclidean', 1 - result['similarity']) * 100, 1)
+            })
+        
+        # Generate thumbnail for uploaded image
+        if is_sample:
+            thumbnail_path = filepath  # Use original path for samples
+        else:
+            thumbnail_path = image_processor.create_thumbnail(filepath, filename)
+        
+        # Log search query
+        processing_time = int((time.time() - start_time) * 1000)
+        top_similarity = similar_faces[0]['similarity_score'] / 100 if similar_faces else 0
+        db_manager.log_search_query(
+            query_image_path=filepath,
+            results_count=len(similar_faces),
+            processing_time_ms=processing_time,
+            top_similarity=top_similarity
+        )
+        
+        return render_template('results.html', 
+                             query_image=thumbnail_path,
+                             similar_faces=similar_faces,
+                             total_faces=len(similar_faces),
+                             processing_time=processing_time,
+                             face_details=best_face)
+        
+    except Exception as e:
+        logging.error(f"Error processing image: {str(e)}")
+        flash('An error occurred while processing the image.', 'error')
+        if not is_sample and os.path.exists(filepath):
+            os.remove(filepath)
+        return redirect(url_for('index'))
+
 @app.route('/')
 def index():
     """Main page with upload form"""
     return render_template('index.html')
+
+@app.route('/upload_sample', methods=['POST'])
+def upload_sample():
+    """Handle sample image upload"""
+    try:
+        sample_image = request.form.get('sample_image')
+        if not sample_image:
+            flash('No sample image specified', 'error')
+            return redirect(url_for('index'))
+        
+        # Build path to sample image
+        sample_path = os.path.join(DATASET_FOLDER, sample_image)
+        if not os.path.exists(sample_path):
+            flash('Sample image not found', 'error')
+            return redirect(url_for('index'))
+        
+        # Process the sample image
+        return process_image_file(sample_path, sample_image, is_sample=True)
+        
+    except Exception as e:
+        logging.error(f"Sample upload error: {str(e)}")
+        flash('An error occurred processing the sample image', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -86,81 +193,8 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Process the uploaded image
-        try:
-            # Load and validate image
-            image = cv2.imread(filepath)
-            if image is None:
-                flash('Unable to process the uploaded image. Please try a different file.', 'error')
-                os.remove(filepath)
-                return redirect(url_for('index'))
-            
-            # Preprocess image
-            image = face_engine.preprocess_image(image)
-            
-            # Detect faces using InsightFace
-            faces = face_engine.detect_faces(image)
-            
-            if not faces:
-                flash('No faces detected in the uploaded image. Please try a different photo.', 'error')
-                os.remove(filepath)
-                return redirect(url_for('index'))
-            
-            # Get embedding for the best face (highest confidence)
-            best_face = max(faces, key=lambda x: x.get('confidence', 0))
-            query_embedding = best_face.get('embedding')
-            
-            if query_embedding is None:
-                flash('Unable to generate face features from the uploaded image.', 'error')
-                os.remove(filepath)
-                return redirect(url_for('index'))
-            
-            # Search for similar faces using FAISS
-            similar_results = search_engine.search_similar(query_embedding, top_k=20, threshold=0.3)
-            
-            # Process results for display
-            similar_faces = []
-            for result in similar_results:
-                metadata = result.get('metadata', {})
-                similar_faces.append({
-                    'id': result['index'],
-                    'thumbnail': metadata.get('thumbnail_path', ''),
-                    'source_image': metadata.get('filename', ''),
-                    'similarity_score': round(result['similarity'] * 100, 1),
-                    'confidence': metadata.get('confidence', 0),
-                    'age': metadata.get('age'),
-                    'gender': metadata.get('gender'),
-                    # Add detailed similarity metrics if available
-                    'cosine_similarity': round(result.get('cosine', result['similarity']) * 100, 1) if 'cosine' in result or 'similarity' in result else None,
-                    'euclidean_similarity': round(result.get('euclidean', 1 - result['similarity']) * 100, 1) if 'euclidean' in result or 'similarity' in result else None
-                })
-            
-            # Generate thumbnail for uploaded image
-            thumbnail_path = image_processor.create_thumbnail(filepath, filename)
-            
-            # Log search query
-            processing_time = int((time.time() - start_time) * 1000)
-            top_similarity = similar_faces[0]['similarity_score'] / 100 if similar_faces else 0
-            db_manager.log_search_query(
-                query_image_path=filepath,
-                results_count=len(similar_faces),
-                processing_time_ms=processing_time,
-                top_similarity=top_similarity
-            )
-            
-            return render_template('results.html', 
-                                 query_image=thumbnail_path,
-                                 similar_faces=similar_faces,
-                                 total_faces=len(similar_faces),
-                                 processing_time=processing_time,
-                                 face_details=best_face)
-            
-        except Exception as e:
-            logging.error(f"Error processing image: {str(e)}")
-            flash('An error occurred while processing your image. Please try again.', 'error')
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            return redirect(url_for('index'))
+        # Process the uploaded image using common function
+        return process_image_file(filepath, filename, is_sample=False)
     
     except Exception as e:
         logging.error(f"Upload error: {str(e)}")
@@ -171,15 +205,21 @@ def upload_file():
 def crawl_images():
     """Start automated web crawling for face images"""
     try:
-        max_images = request.json.get('max_images', 50) if request.is_json else 50
+        data = request.json if request.is_json else {}
+        max_images = data.get('max_images', 50)
+        custom_url = data.get('custom_url', '').strip()
         
         # Start crawling session
         target_websites = [w['name'] for w in web_crawler.get_target_websites()]
+        if custom_url:
+            target_websites.insert(0, 'custom_url')
         session_id = db_manager.start_crawl_session(target_websites)
         
         # Perform web crawling
         logging.info(f"Starting automated crawling for {max_images} images")
-        crawl_stats = web_crawler.crawl_websites(max_images=max_images)
+        if custom_url:
+            logging.info(f"Including custom URL: {custom_url}")
+        crawl_stats = web_crawler.crawl_websites(max_images=max_images, custom_url=custom_url)
         
         # Get crawled images
         crawled_images = web_crawler.get_crawled_images()

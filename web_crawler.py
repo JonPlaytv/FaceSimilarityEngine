@@ -88,53 +88,74 @@ class WebCrawler:
             }
         ]
     
-    def crawl_websites(self, max_images: int = 100) -> Dict:
+    def crawl_websites(self, max_images: int = 100, custom_url: str = None) -> Dict:
         """
-        Generate sample face images for demonstration purposes
+        Crawl websites for real images
         
         Args:
-            max_images: Maximum number of images to generate
+            max_images: Maximum number of images to download
+            custom_url: Optional custom URL to crawl
             
         Returns:
             Dictionary with crawling statistics
         """
-        logging.info("Starting sample image generation (simulated crawling)")
+        logging.info(f"Starting web crawling for {max_images} images")
         
-        try:
-            # Instead of web crawling, generate sample face images
-            from create_realistic_faces import create_realistic_faces
-            
-            # Generate realistic face images
-            generated_count = create_realistic_faces(max_images)
-            
-            # Update stats
-            self.crawl_stats['images_downloaded'] = generated_count
-            self.crawl_stats['pages_visited'] = 1
-            
-            logging.info(f"Generated {generated_count} sample face images")
-            
-        except Exception as e:
-            logging.error(f"Error generating sample images: {e}")
-            # Fallback: copy existing dataset images to crawled folder
+        # Reset stats
+        self.crawl_stats = {
+            'pages_visited': 0,
+            'images_downloaded': 0,
+            'faces_detected': 0,
+            'errors': 0
+        }
+        
+        websites_to_crawl = []
+        
+        # If custom URL provided, add it to the list
+        if custom_url:
+            websites_to_crawl.append({
+                'name': 'custom',
+                'base_url': custom_url,
+                'type': 'generic',
+                'max_pages': 1
+            })
+        
+        # Add default websites
+        websites_to_crawl.extend(self.get_target_websites())
+        
+        images_per_site = max(1, max_images // len(websites_to_crawl))
+        total_collected = 0
+        
+        for website in websites_to_crawl:
+            if total_collected >= max_images:
+                break
+                
             try:
-                import shutil
-                dataset_folder = 'static/dataset'
-                generated_count = 0
+                logging.info(f"Crawling {website['name']}: {website['base_url']}")
+                self.crawl_stats['pages_visited'] += 1
                 
-                if os.path.exists(dataset_folder):
-                    for filename in os.listdir(dataset_folder):
-                        if filename.lower().endswith(('.jpg', '.jpeg', '.png')) and generated_count < max_images:
-                            src_path = os.path.join(dataset_folder, filename)
-                            dst_path = os.path.join(self.crawl_folder, f"sample_{generated_count}_{filename}")
-                            shutil.copy2(src_path, dst_path)
-                            generated_count += 1
+                # Choose appropriate crawling method
+                if website['type'] == 'pexels':
+                    collected = self.crawl_pexels(website, images_per_site)
+                elif website['type'] == 'pixabay':
+                    collected = self.crawl_pixabay(website, images_per_site)
+                elif website['type'] == 'unsplash':
+                    collected = self.crawl_unsplash(website, images_per_site)
+                else:
+                    collected = self.crawl_generic(website, images_per_site)
                 
-                self.crawl_stats['images_downloaded'] = generated_count
-                logging.info(f"Copied {generated_count} existing images as samples")
+                total_collected += collected
+                logging.info(f"Collected {collected} images from {website['name']}")
                 
-            except Exception as fallback_error:
-                logging.error(f"Fallback also failed: {fallback_error}")
+                # Small delay between sites
+                time.sleep(2)
+                
+            except Exception as e:
+                logging.error(f"Error crawling {website['name']}: {e}")
                 self.crawl_stats['errors'] += 1
+        
+        self.crawl_stats['images_downloaded'] = total_collected
+        logging.info(f"Crawling completed. Total images: {total_collected}")
         
         return self.crawl_stats
     
