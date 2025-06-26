@@ -26,31 +26,41 @@ class InsightFaceEngine:
         logging.info("InsightFaceEngine initialized")
     
     def initialize_models(self):
-        """Initialize InsightFace models"""
+        """Initialize InsightFace models with Windows compatibility"""
         try:
-            # Create InsightFace app
+            import os
+            # Set ONNX runtime optimization for Windows compatibility
+            os.environ['OMP_NUM_THREADS'] = '1'
+            os.environ['ONNXRUNTIME_EXECUTION_PROVIDERS'] = 'CPUExecutionProvider'
+            
+            # Create InsightFace app with minimal configuration
             self.app = FaceAnalysis(
-                providers=['CPUExecutionProvider'],  # Use CPU for compatibility
+                providers=['CPUExecutionProvider'],
                 allowed_modules=['detection', 'recognition']
             )
             
-            # Prepare model with detection size
-            self.app.prepare(ctx_id=0, det_size=self.detection_size)
+            # Prepare model with smaller detection size for Windows stability
+            self.app.prepare(ctx_id=0, det_size=(320, 320))
+            self.detection_size = (320, 320)
             self.model_loaded = True
             
-            logging.info("InsightFace models loaded successfully")
+            logging.info("InsightFace models loaded successfully with Windows optimizations")
             
         except Exception as e:
-            logging.error(f"Failed to initialize InsightFace models: {e}")
-            logging.info("Falling back to basic face detection")
+            logging.error(f"InsightFace initialization failed: {e}")
+            logging.info("Using OpenCV fallback for face detection")
             self.model_loaded = False
-            # Initialize fallback detector
+            
+            # Initialize OpenCV fallback
             try:
                 import cv2
-                self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-                logging.info("Fallback OpenCV detector loaded")
+                cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+                self.face_cascade = cv2.CascadeClassifier(cascade_path)
+                if self.face_cascade.empty():
+                    raise Exception("Could not load Haar cascade classifier")
+                logging.info("OpenCV fallback detector initialized successfully")
             except Exception as fallback_error:
-                logging.error(f"Fallback detector also failed: {fallback_error}")
+                logging.error(f"OpenCV fallback initialization failed: {fallback_error}")
                 self.face_cascade = None
     
     def detect_faces(self, image: np.ndarray) -> List[Dict]:

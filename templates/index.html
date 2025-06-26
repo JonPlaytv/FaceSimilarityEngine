@@ -394,24 +394,6 @@ function initializeDataset() {
         initializeBtn.disabled = false;
     });
 }
-                    No dataset found. Please add sample images to <code>static/dataset/</code> and initialize.
-                `;
-                initializeBtn.disabled = false;
-                statusBadge.className = 'badge bg-warning';
-                statusText.textContent = 'Dataset not initialized';
-                
-                // Disable upload form
-                document.getElementById('submitBtn').disabled = true;
-            }
-        })
-        .catch(error => {
-            console.error('Error checking dataset status:', error);
-            document.getElementById('datasetInfo').innerHTML = `
-                <i class="fas fa-exclamation-circle text-danger me-2"></i>
-                Error checking dataset status
-            `;
-        });
-}
 
 function initializeDataset() {
     const initializeBtn = document.getElementById('initializeBtn');
